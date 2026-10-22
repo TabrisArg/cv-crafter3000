@@ -1,0 +1,3 @@
+/api/*  https://ais-pre-nminouarwws5lt3so6kax6-35388622855.europe-west2.run.app/api/:splat  200
+/auth/* https://ais-pre-nminouarwws5lt3so6kax6-35388622855.europe-west2.run.app/auth/:splat 200
+/* /index.html 200

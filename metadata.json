@@ -1,0 +1,6 @@
+{
+  "name": "CV Crafter",
+  "description": "AI-powered CV builder, ATS scanner, and optimizer for job applications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

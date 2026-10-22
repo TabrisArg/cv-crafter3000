@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - id: string (required) - User's UID
+    //   - email: string (required) - User's email
+    //   - name: string (required) - User's display name
+    //   - picture: string (optional) - User's profile picture URL
+    //
+    // Collection: cvs
+    // Document ID: cvId (random UUID)
+    // Fields:
+    //   - id: string (required) - CV ID
+    //   - title: string (required) - CV title
+    //   - content: map (required) - CV data (personalInfo, summary, experience, education, skills)
+    //   - template: string (required) - Template name
+    //   - updated_at: string (required) - ISO 8601 timestamp
+    //   - parent_id: string (optional) - Parent CV ID
+    //   - userId: string (required) - Owner's UID
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches(".+@.+\\..+");
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is string && ts.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "tabrisg@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['id', 'email', 'name']) &&
+             data.id == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
+             (!('picture' in data) || (data.picture is string && data.picture.size() < 2000)) &&
+             (!('role' in data) || data.role == 'user');
+    }
+
+    function isValidCV(data) {
+      return hasRequiredFields(['id', 'title', 'content', 'updated_at', 'userId']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.content is map &&
+             data.updated_at is string && isValidTimestamp(data.updated_at) &&
+             data.userId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    match /cvs/{cvId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidCV(request.resource.data);
+      allow update: if isDocOwner() && isValidCV(request.resource.data) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

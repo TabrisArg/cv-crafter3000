@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "CV": {
+      "title": "CV",
+      "description": "A curriculum vitae document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "object" },
+        "template": { "type": "string" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "parent_id": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "title", "content", "updated_at", "userId"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "picture": { "type": "string" }
+      },
+      "required": ["id", "email", "name"]
+    }
+  },
+  "firestore": {
+    "/cvs/{cvId}": {
+      "schema": "CV",
+      "description": "Collection of CVs"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles"
+    }
+  }
+}
